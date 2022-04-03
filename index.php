@@ -5,6 +5,12 @@ session_start();
 
 if(isset($_SESSION['username'])){
 	$userName = $_SESSION['username'];
+    $userID = $_SESSION['iduser'];
+
+    // NOTE total chart/keranjang display num
+    $sql = "SELECT COUNT(id) FROM cart WHERE kodeUser = $userID";
+    $cart = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    $cartStack = $cart['COUNT(id)'];	
 }
 // var_dump($userName);
 $sql = "SELECT product.*, user.lokasi FROM product INNER JOIN user USING(kodeUser) LIMIT 6";
@@ -26,6 +32,7 @@ $product = mysqli_query($conn, $sql);
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
     <title>Home | Informart</title>
+	
 <style>
     /* Make the image fully responsive */
 	@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
@@ -225,40 +232,8 @@ $product = mysqli_query($conn, $sql);
 	<title></title>
 </head>
 <body>
-	<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light shadow-sm shadow" style="height: 50px;">
-	  <a class="navbar-brand mr-5" href="#">Informart</a>
-	  <form action="katalog.php" class="ml-5" style="width: 70%; margin-top:15px;">
-		<div class="input-group" method="GET" action="katalog.php">
-			<input type="text" name="cari" class="form-control" placeholder="Cari barang disini!" aria-label="Cari barang disini!" aria-describedby="basic-addon2" required>
-			<div class="input-group-append">
-				<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> </button>
-			</div>
-		</div>
-	  </form>
-	  <div class="collapse navbar-collapse"  id="navbarText">
-	    <ul class="navbar-nav ml-auto" style="margin-right: 100px;">
-	      <li class="nav-item active " style="margin: 0px 10px;">
-	        <a class="nav-link mt-1" href="cart.php"><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary">6</span></a>
-	      </li>
-		  <?php 
-		  	if(!isset($userName)){ ?>
-				<li class="nav-item" style="margin: 0px 5px; float:right;">
-				  <button class="navbar-text btn btn-outline-primary btn-sm text-primary" href="#">Daftar</button>
-				</li>
-				<li class="nav-item" style="margin: 0px -90px 0px 0px;">
-					<a class="navbar-text btn btn-primary btn-sm text-white" href="login.php">Masuk</a>
-				</li>
-				<?php } else{?>
-				<li class="nav-item" style="margin: 0px 5px; float:right;">
-					<button class="navbar-text btn btn-outline-primary btn-sm text-primary" href="#"><?= $userName?></button>
-				</li>
-				<li class="nav-item" style="margin: 0px -90px 0px 0px;">
-				  <a class="navbar-text btn btn-primary btn-sm text-white" href="logout.php">Logout</a>
-				</li>
-			 <?php } ?>
-	    </ul>
-	  </div>
-	</nav>
+	<?php include "nav.php"; ?>
+
     <div id="banner" class="container">
 		<div id="demo" class="row carousel slide " data-ride="carousel">
 

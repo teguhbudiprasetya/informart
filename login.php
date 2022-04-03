@@ -72,9 +72,12 @@ if (isset($_POST['signup'])) {
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
     <title>Sign Up & Log In | Informart</title>
-    <style>
+<style>
         #header-brand, h4{
             color: #0275d8;
+        }
+        #header-brand a{
+            text-decoration: none;
         }
         #frame-masuk, #frame-daftar{
             height: 400px;
@@ -105,11 +108,10 @@ if (isset($_POST['signup'])) {
 </head>
 
 <body>
-    <a href="index.php">Home</a>
     <div class="container">
         <div class="row justify-content-center mt-4">
             <div class="col text-center mb-5">
-                <h2 id="header-brand" class="white">Informart</h2>
+                <h2 id="header-brand" class="white"><a href="index.php">Informart</a></h2>
             </div>
         </div>
         <div class="row justify-content-center mt-5">
@@ -170,6 +172,7 @@ if (isset($_POST['signup'])) {
     </div>
     <script>
         document.body.style.backgroundColor = '#F6F6F6';
+        const header = document.querySelector('#header-brand');
         const btnMasuk = document.querySelector('.changeColorBtn-1');
         const btnDaftar = document.querySelector('.changeColorBtn-2');
         // const frame = document.getElementById('frame');
@@ -180,7 +183,7 @@ if (isset($_POST['signup'])) {
         const frameDaftar = document.querySelector('#frame-daftar');
         btnMasuk.addEventListener('click', function onClick(event) {
             document.body.style.backgroundColor = '#4891FF';
-            
+            // header.style.color = "white";
             for (let i = 0; i < textColor.length; i++) {
                 textColor[i].style.color = "#686464";
             }
@@ -192,6 +195,7 @@ if (isset($_POST['signup'])) {
         });
         btnDaftar.addEventListener('click', function onClick(event) {
             document.body.style.backgroundColor = '#F6F6F6';
+            // header.style.color = "#0275d8";
             frameMasuk.style.display = 'block';
             frameDaftar.style.display = 'none';
             for (let i = 0; i < textColorWhite.length; i++) {

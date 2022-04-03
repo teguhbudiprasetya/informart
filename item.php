@@ -6,7 +6,12 @@ session_start();
 
 if(isset($_SESSION['username'])){
 	$userName = $_SESSION['username'];
-    $userCode = $_SESSION['iduser'];
+    $userID = $_SESSION['iduser'];
+
+    // NOTE total chart/keranjang display num
+    $sql = "SELECT COUNT(id) FROM cart WHERE kodeUser = $userID";
+    $cart = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    $cartStack = $cart['COUNT(id)'];
 }
 // $item = ;
 $sql = "SELECT * FROM product WHERE kodeProduk = '$_GET[product]'";
@@ -36,7 +41,7 @@ $profilLocation = $user["lokasi"];
 $sql = "SELECT AVG(rating), sum(terjual) FROM product WHERE kodeUser = $userCode";
 $profileRateSold = mysqli_fetch_assoc(mysqli_query($conn, $sql));
 $profileTransaction = $profileRateSold["sum(terjual)"];
-$profileRating = $profileRateSold["avg(rating)"];
+$profileRating = $profileRateSold["AVG(rating)"];
 
 $sql = "SELECT * FROM detailsproduct WHERE kodeProduk = $itemCode";
 $detailsproduct = mysqli_query($conn, $sql);
@@ -55,7 +60,7 @@ if(isset($_POST['submit'])){
     $ukuran = $_POST['ukuran'];
     $warna = $_POST['warna'];
     $jumlah = $_POST['jumlah'];
-    echo $jumlah;
+    // echo $jumlah;
     // $checkout = "SELECT * FROM ";
     $sql = "SELECT stok FROM detailsproduct WHERE kodeProduk = $itemCode AND ukuran = '$ukuran' AND warna = '$warna'";
     $productStock = mysqli_fetch_assoc(mysqli_query($conn, $sql));
@@ -63,25 +68,33 @@ if(isset($_POST['submit'])){
     $sql = "SELECT kodeItem FROM detailsproduct WHERE kodeProduk = $itemCode AND ukuran = '$ukuran' AND warna = '$warna'";
     $kode = mysqli_fetch_assoc(mysqli_query($conn, $sql));
     $kodeItem = $kode['kodeItem'];
-    if($productStock['stok'] >= $jumlah){
-        
-        // $sql = "UPDATE detailsproduct SET stok = stok - '$jumlah' WHERE kodeProduk = $itemCode AND ukuran = '$ukuran' AND warna = '$warna'";
-        // $checkoutStock = mysqli_query($conn, $sql);
+    if(isset($userID)){
+        if($productStock['stok'] >= $jumlah){
+            
+            $sql = "INSERT INTO cart VALUES('', $userCode, $kodeItem, '$jumlah', '$warna', '$ukuran')";
+            $insertCart = mysqli_query($conn, $sql);
+            if($insertCart){
+            echo    "<script>
+                        alert('Berhasil masuk keranjang!')
+                    </script>";
+            header("location: cart.php");
+            }
+            else{
+                echo    "<script>
+                            alert('Gagal membeli!')
+                        </script>";
+            }
 
-        $sql = "INSERT INTO cart VALUES('', $userCode, $kodeItem, '$jumlah', '$warna', '$ukuran')";
-        $insertCart = mysqli_query($conn, $sql) or die(mysqli_error($conn));
-        if($insertCart){
-        echo    "<script>
-                    alert('Berhasil membeli!')
-                </script>";
-        // header("location: cart.php");
+        } else{
+            echo    "<script>
+                            alert('Stok kurang!')
+                        </script>";
         }
-    else{
+    }else{
         echo    "<script>
-                    alert('Stok kurang!')
+                    alert('Anda belum login, silahka login terlebih dahulu!')
                 </script>";
     }
-}
 }
 
 // $ukuran = "<script>document.write(localStorage.getItem('ukuran'))</script>";
@@ -291,40 +304,7 @@ if(isset($_POST['submit'])){
 	<title></title>
 </head>
 <body>
-    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light shadow-sm shadow" style="height: 50px;">
-	  <a class="navbar-brand mr-5" href="index.php">Informart</a>
-	  <form action="katalog.php" class="ml-5" style="width: 70%; margin-top:15px;">
-		<div class="input-group">
-        <input type="text" name="cari" class="form-control" placeholder="Cari barang disini!" aria-label="Cari barang disini!" aria-describedby="basic-addon2" required>
-			<div class="input-group-append">
-				<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> </button>
-			</div>
-		</div>
-	  </form>
-	  <div class="collapse navbar-collapse"  id="navbarText">
-	    <ul class="navbar-nav ml-auto" style="margin-right: 100px;">
-	      <li class="nav-item active " style="margin: 0px 10px;">
-	        <a class="nav-link mt-1" href="cart.php"><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary">6</span></a>
-        </li>
-        <?php 
-		  	if(!isset($userName)){ ?>
-				<li class="nav-item" style="margin: 0px 5px; float:right;">
-				  <button class="navbar-text btn btn-outline-primary btn-sm text-primary" href="#">Daftar</button>
-				</li>
-				<li class="nav-item" style="margin: 0px -90px 0px 0px;">
-					<a class="navbar-text btn btn-primary btn-sm text-white" href="login.php">Masuk</a>
-				</li>
-				<?php } else{?>
-				<li class="nav-item" style="margin: 0px 5px; float:right;">
-					<button class="navbar-text btn btn-outline-primary btn-sm text-primary" href="#"><?= $userName?></button>
-				</li>
-				<li class="nav-item" style="margin: 0px -90px 0px 0px;">
-				  <a class="navbar-text btn btn-primary btn-sm text-white" href="logout.php">Logout</a>
-				</li>
-			 <?php } ?>
-        </ul>
-      </div>
-    </nav>
+    <?php include "nav.php"; ?>
 <div id="display-item" class="row">
     <div id="demo" class="col-4 carousel slide " data-ride="carousel">
 
@@ -414,7 +394,7 @@ if(isset($_POST['submit'])){
                                     <small class="toko-name"><?=$profilName;?> &nbsp;</small> <button class="btn btn-outline-primary btn-sm" style="height: 40%;">Ikuti</button>
                                     <p><i class="fa fa-cart-arrow-down" aria-hidden="true"></i> <?=$profileTransaction;?> Transaksi</p>
                                     <p><i class="fa fa-star" aria-hidden="true" style="color: yellow;"></i><?= $profileRating;?> rata-rata ulasan</p>
-                                    <?php echo $profileRating;?>
+                                    <?php //echo $profileRating;?>
                                     
                                 </div>
                             </div>
@@ -426,7 +406,7 @@ if(isset($_POST['submit'])){
         <div class="pengiriman">
             <h5>Pengiriman</h5>
             <div class="main-ongkir">
-                <form action="">
+                <form action="cart.php">
                     <p>
                         <i class="fa fa-map-marker" aria-hidden="true"></i>
                         &nbsp; Dikirim dari
@@ -472,7 +452,8 @@ if(isset($_POST['submit'])){
 
             <div class="frame">
                 <h6 id="jenis" style="font-weight: 900;">Pilih Jenis</h6>  
-                <form action="#" method="POST">
+                <form action="" method="POST">
+                    <input type="text" value="-" name="ukuran" hidden>
                     <?php 
                     if($Size != '-'){
                         ?>
@@ -487,7 +468,6 @@ if(isset($_POST['submit'])){
                         endforeach; ?>
                         </select>
                     <?php } ?>
-                    
                     <label for="">Warna</label>
                     <select name="warna" id="warna" class="custom-select">
                         <option value="" hidden readonly></option>
