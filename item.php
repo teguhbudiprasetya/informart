@@ -27,6 +27,15 @@ $itemDesc = $item["deskripsi"];
 $itemCategori = $item["kategori"];
 $userCode = $item["kodeUser"];
 
+$sql = "SELECT user.idProvinsi AS idProvinsi, provinsi.namaProvinsi AS lokasi FROM user INNER JOIN provinsi USING(idProvinsi) WHERE kodeUser = $userCode";
+$provinsi = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+$idProvinsiSeller = $provinsi['idProvinsi'];
+$lokasi = $provinsi['lokasi'];
+
+// $sql = "SELECT user.idProvinsi AS idProvinsi, provinsi.namaProvinsi AS lokasi FROM user INNER JOIN provinsi USING(idProvinsi) WHERE kodeUser = $userCode";
+// $provinsi = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+
+
 
 $sql = "SELECT sum(stok) FROM detailsproduct WHERE kodeProduk = $itemCode ";
 $stok = mysqli_fetch_assoc(mysqli_query($conn, $sql));
@@ -35,7 +44,7 @@ $sql = "SELECT * FROM user WHERE kodeUser = $userCode";
 $user = mysqli_fetch_assoc(mysqli_query($conn, $sql));
 $profilPict = $user["foto"];
 $profilName = $user["username"];
-$profilLocation = $user["lokasi"];
+// $profilLocation = $user["lokasi"];
 
 
 $sql = "SELECT AVG(rating), sum(terjual) FROM product WHERE kodeUser = $userCode";
@@ -54,6 +63,7 @@ $Size = $selectionSize['ukuran'];
 
 $sql = "SELECT * FROM detailsproduct WHERE kodeProduk = $itemCode";
 $InfoStock = mysqli_query($conn, $sql);
+// echo $userID;
 
 
 if(isset($_POST['submit'])){
@@ -69,9 +79,21 @@ if(isset($_POST['submit'])){
     $kode = mysqli_fetch_assoc(mysqli_query($conn, $sql));
     $kodeItem = $kode['kodeItem'];
     if(isset($userID)){
+        
+        $destinasi = $_POST['destinasi'];
+        $ekspedisi = $_POST['ekspedisi'];
+
+        $sql = "SELECT * FROM ekspedisi WHERE idEkspedisi = $ekspedisi";
+        $calc = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+        $ekspedisiPrice = $calc['ekspedisiPrice'];
+
+        $sql = "SELECT * FROM provinsi WHERE idProvinsi = $destinasi";
+        $calc = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+        $totalOngkir = (abs($calc['idProvinsi'] - $idProvinsiSeller) + 1 ) * $ekspedisiPrice;
+
         if($productStock['stok'] >= $jumlah){
             
-            $sql = "INSERT INTO cart VALUES('', $userCode, $kodeItem, '$jumlah', '$warna', '$ukuran')";
+            $sql = "INSERT INTO cart VALUES('', $userID, $kodeItem, '$jumlah', '$warna', '$ukuran', '$totalOngkir', '$ekspedisi')";
             $insertCart = mysqli_query($conn, $sql);
             if($insertCart){
             echo    "<script>
@@ -81,7 +103,7 @@ if(isset($_POST['submit'])){
             }
             else{
                 echo    "<script>
-                            alert('Gagal membeli!')
+                            alert('Masukkan detail pesanan!')
                         </script>";
             }
 
@@ -97,20 +119,29 @@ if(isset($_POST['submit'])){
     }
 }
 
-// $ukuran = "<script>document.write(localStorage.getItem('ukuran'))</script>";
-// echo $ukuran;
-// $warna = "<script>document.write(localStorage.getItem('warna'))</script>";
-// echo $warna;
-// var_dump($warna);
+if(isset($_POST['check'])){
+    $destinasi = $_POST['destinasi'];
+    $ekspedisi2 = $_POST['ekspedisi2'];
 
-// // $phpVar = "<script>document.writeln(javascriptVar);</script>";
-// // if(isset(localStorage.getItem('ukuran')) && isset(localStorage.getItem('warna'))){
+    $sql = "SELECT * FROM ekspedisi WHERE idEkspedisi = $ekspedisi2";
+    $calc = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    $ekspedisiPrice = $calc['ekspedisiPrice'];
+    $ekspedisiSelected = $calc['ekspedisiName'];
+    $ekspedisiSelectedValue = $calc['idEkspedisi'];
 
-// // }
-// if($ukuran != 'null'){
-//     $sql = "SELECT stok FROM detailsproduct WHERE kodeProduk = $itemCode AND ukuran = $ukuran AND warna = $warna";
-//     $productStock = mysqli_fetch_assoc(mysqli_query($conn, $sql));
-// }
+    $sql = "SELECT * FROM provinsi WHERE idProvinsi = $destinasi";
+    $calc = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    $lokasiSelected = $calc['namaProvinsi'];
+    $lokasiSelectedValue = $calc['idProvinsi'];
+    $checkOngkir = (abs($calc['idProvinsi'] - $idProvinsiSeller) + 1 ) * $ekspedisiPrice;
+}
+
+
+$sql = "SELECT * FROM ekspedisi";
+$ekspedisi = mysqli_query($conn, $sql);
+
+$sql = "SELECT * FROM provinsi";
+$provinsi = mysqli_query($conn, $sql);
 ?>
 <html>
 <head>
@@ -295,7 +326,7 @@ if(isset($_POST['submit'])){
         margin-top: 6px;
         margin-left: -10px;
     }
-    .pengiriman select, #ongkir{
+    .pengiriman select, #ongkir, #dari{
         color: #0275d8 ;
         font-weight: bold;
     }
@@ -393,7 +424,7 @@ if(isset($_POST['submit'])){
                                 <div class="col-auto" style="margin-left: -25px;">
                                     <small class="toko-name"><?=$profilName;?> &nbsp;</small> <button class="btn btn-outline-primary btn-sm" style="height: 40%;">Ikuti</button>
                                     <p><i class="fa fa-cart-arrow-down" aria-hidden="true"></i> <?=$profileTransaction;?> Transaksi</p>
-                                    <p><i class="fa fa-star" aria-hidden="true" style="color: yellow;"></i><?= $profileRating;?> rata-rata ulasan</p>
+                                    <p><i class="fa fa-star" aria-hidden="true" style="color: yellow;"></i><?= number_format($profileRating,1,',','.');?> rata-rata ulasan</p>
                                     <?php //echo $profileRating;?>
                                     
                                 </div>
@@ -406,40 +437,65 @@ if(isset($_POST['submit'])){
         <div class="pengiriman">
             <h5>Pengiriman</h5>
             <div class="main-ongkir">
-                <form action="cart.php">
-                    <p>
+                <form action="" method="POST">
+                    <p class="mt-4">
                         <i class="fa fa-map-marker" aria-hidden="true"></i>
-                        &nbsp; Dikirim dari
-                        <select class="custom-select  mb-2 shadow-none no-border">
-                            <option value="1" selected>Jakarta Barat</option>
-                            <option value="2">Jawa Timur</option>
-                            <option value="3">Jawa Barat</option>
-                            <option value="4">Jawa Tengah</option>
-                            <option value="5">Banten</option>
-                        </select>
+                        
+                        &nbsp; Dikirim dari <span id="dari"><?=$lokasi;?></span> 
                     </p>
-                    <p style="margin: -45px 0 0 13px;">
+                    <p style="margin: -30px 0 0 13px;">
                         &nbsp; Dikirim ke
-                        <select class="custom-select  mb-2 shadow-none no-border">
-                            <option value="1" selected>Jakarta Barat</option>
-                            <option value="2">Jawa Timur</option>
-                            <option value="3">Jawa Barat</option>
-                            <option value="4">Jawa Tengah</option>
-                            <option value="5">Banten</option>
+                        <select name="destinasi" class="custom-select  mb-2 shadow-none no-border" style="width: 50%;">
+                            <!-- <option value="" hidden readonly>DKI Jakarta</option> -->
+                        <?php 
+                        if(isset($lokasiSelected)){ ?>
+                            <option selected hidden value="<?=$lokasiSelectedValue;?>"><?=$lokasiSelected;?></option>
+                            <?php foreach($provinsi as $row):
+                            ?>
+                            <option value="<?=$row['idProvinsi'];?>"><?=$row['namaProvinsi'];?></option>
+                            <?php 
+                            endforeach;
+                        }else{
+                            foreach($provinsi as $row):
+                            ?>
+                            <option value="<?=$row['idProvinsi'];?>"><?=$row['namaProvinsi'];?></option>
+                            <?php 
+                            endforeach; 
+                        }
+                        ?>
                         </select>
                     </p>
                     <p style="margin: -25px 0 0 0px;">
                         <i class="fa fa-truck" aria-hidden="true"></i>
                         Ekspedisi
-                        <select class="custom-select  mb-2 shadow-none no-border">
-                            <option value="1" selected>JNE Express</option>
-                            <option value="2">J&T Express</option>
-                            <option value="3">Tiki</option>
+                        <select name="ekspedisi2" class="custom-select  mb-2 shadow-none no-border">
+                        <?php
+                        if(isset($ekspedisiSelected)){ ?>
+                            <option selected hidden value="<?=$ekspedisiSelectedValue ;?>"><?=$ekspedisiSelected;?></option> 
+                        <?php foreach($ekspedisi as $row):
+                        ?>
+                        <option value="<?=$row['idEkspedisi'];?>"><?=$row['ekspedisiName'];?></option>
+                        <?php 
+                        endforeach;
+                        }else{
+                            foreach($ekspedisi as $row):
+                            ?>
+                            <option value="<?=$row['idEkspedisi'];?>"><?=$row['ekspedisiName'];?></option>
+                            <?php 
+                            endforeach; 
+                        }
+                        ?>
                         </select>
                     </p>
                     <h6>Biaya Ongkos Kirim</h6>
-                    <p id="ongkir">Rp. 30.000</p>
-                    <button class="btn btn-sm btn-primary">Cek Ongkir</button>
+                    <?php 
+                    if(isset($checkOngkir)){?>
+                        <p id="ongkir"> <?= $checkOngkir;?></p>
+                    <?php } else{ ?>        
+                        <p id="ongkir">Rp. 0</p>
+                    <?php }
+                    ?>
+                    <button name="check" class="btn btn-sm btn-primary">Cek Ongkir</button>
                 </form>
             </div>
         </div>
@@ -458,7 +514,7 @@ if(isset($_POST['submit'])){
                     if($Size != '-'){
                         ?>
                     <label for="">Ukuran</label>
-                    <select name="ukuran" id="ukuran" class="custom-select mb-2">
+                    <select name="ukuran" id="ukuran" class="custom-select mb-2" required>
                         <option value="" hidden readonly></option>
                         <?php 
                         foreach($detailsproduct as $row):
@@ -469,8 +525,8 @@ if(isset($_POST['submit'])){
                         </select>
                     <?php } ?>
                     <label for="">Warna</label>
-                    <select name="warna" id="warna" class="custom-select">
-                        <option value="" hidden readonly></option>
+                    <select name="warna" id="warna" class="custom-select" required>
+                        <!-- <option value="" hidden readonly></option> -->
                     <?php 
                         foreach($detailsproduct as $row):
                         ?>
@@ -482,11 +538,37 @@ if(isset($_POST['submit'])){
                     <!-- <button type="submit" class="btn btn-outline-primary btn-sm btn-block mt-2 mb-2">Cek Stok</button> -->
                     <label for="">Jumlah</label>
                     <br>
-                    <small id="stok"></small>
-                    <input name="jumlah" type="number" class="form-control form-control-sm mb-2" placeholder="">
+                    <!-- <small id="stok"></small> -->
+                    <input name="jumlah" type="number" class="form-control form-control-sm mb-2" placeholder="" required>
+                    <h6 class="mt-4" id="jenis" style="font-weight: 900;">Pengiriman</h6>
+                    <label for="">Ekspedisi</label>
+                    <select name="ekspedisi" id="warna" class="custom-select">
+                        <!-- <option value="" hidden readonly></option> -->
+                    <?php 
+                        foreach($ekspedisi as $row):
+                        ?>
+                        <option value="<?=$row['idEkspedisi'];?>"><?=$row['ekspedisiName'];?></option>
+                        <?php 
+                        endforeach;
+                        ?>
+                    </select>
+                    <label for="">Alamat</label>
+                    <br>
+                    <select name="destinasi" class="form-control custom-select  mb-2 shadow-none" >
+                            <!-- <option value="" hidden readonly>DKI Jakarta</option> -->
+                        <?php
+                            foreach($provinsi as $row):
+                            ?>
+                            <option value="<?=$row['idProvinsi'];?>"><?=$row['namaProvinsi'];?></option>
+                            <?php 
+                            endforeach; 
+                        ?>
+                        </select>
                     <button name="submit" type="submit" class="btn btn-primary btn-block mt-2 mb-2">Keranjang</button>
                 </form>
             </div>
+
+
             <div class="frame mt-3">
                 <h5>Stok Product</h5>
                 <table class="table table-sm" style="width: 100%;">

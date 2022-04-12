@@ -15,7 +15,7 @@ if(isset($_SESSION['username'])){
 }
 if(isset($_GET['cari'])){
     $cari = $_GET['cari'];
-    $sql = "SELECT product.*, user.lokasi FROM product INNER JOIN user USING(kodeUser) WHERE namaProduk LIKE '%".$cari."%'";
+    $sql = "SELECT product.*, provinsi.namaProvinsi AS lokasi FROM product INNER JOIN user USING(kodeUser) INNER JOIN provinsi USING(idProvinsi) WHERE namaProduk LIKE '%".$cari."%'";
     $product = mysqli_query($conn, $sql);
     if(!$product){
         echo "<script>
@@ -25,7 +25,7 @@ if(isset($_GET['cari'])){
     }
 }elseif(isset($_GET['kategori'])){
     $kategori = $_GET['kategori'];
-    $sql = "SELECT product.*, user.lokasi FROM product INNER JOIN user USING(kodeUser) WHERE kategori LIKE '%".$kategori."%'";
+    $sql = "SELECT product.*, provinsi.namaProvinsi AS lokasi FROM product INNER JOIN user USING(kodeUser) INNER JOIN provinsi USING(idProvinsi) WHERE kategori LIKE '%".$kategori."%'";
     $product = mysqli_query($conn, $sql);
     if(!$product){
         echo "<script>

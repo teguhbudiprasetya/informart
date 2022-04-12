@@ -3,20 +3,132 @@ include 'config.php';
 session_start();
  
 
+    
 
-if(isset($_SESSION['username'])){
 	$userName = $_SESSION['username'];
     $userID = $_SESSION['iduser'];
-
+    $now = date('Y-m-d');
+    
     // NOTE total chart/keranjang display num
     $sql = "SELECT COUNT(id) FROM cart WHERE kodeUser = $userID";
     $cart = mysqli_fetch_assoc(mysqli_query($conn, $sql));
     $cartStack = $cart['COUNT(id)'];
+    // echo var_dump($cartStack);
+    
+    $sql = "SELECT cart.kodeUser AS PembeliID, cart.detailsOngkir AS ongkir ,product.kodeUser AS PenjualID, product.kodeProduk AS productCode ,product.namaProduk AS namaProduk, product.gambar AS gambar, user.username AS sellerName, provinsi.namaProvinsi AS lokasi, cart.id AS ID ,cart.qty AS qty, cart.warna AS warna, cart.ukuran AS ukuran
+    FROM cart JOIN detailsproduct USING(kodeItem) JOIN product USING(kodeProduk) JOIN user ON product.kodeUser JOIN provinsi ON user.idProvinsi = provinsi.idProvinsi = user.kodeUser WHERE cart.kodeUser = $userID";
+    $item = mysqli_query($conn, $sql);
+    
+    $sql = "SELECT sum(cart.qty * product.harga) AS TotalPayment FROM cart INNER JOIN detailsproduct USING(kodeItem) INNER JOIN product USING(kodeProduk) WHERE cart.kodeUser = $userID";
+    $totalPayment = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    
+    $sql = "SELECT sum(detailsOngkir) AS TotalOngkir FROM cart WHERE kodeUser = $userID";
+    $totalOngkir = mysqli_fetch_assoc(mysqli_query($conn, $sql));
 
-    $sql = "SELECT product.namaProduk user.username, user.lokasi, cart.qty, cart.warna, cart.ukuran 
-    FROM cart INNER JOIN detailsproduct USING(kodeItem) INNER JOIN product USING(kodeProduk) INNER JOIN user USING(kodeUser) WHERE kodeUser = $userID";
-    $item = mysqli_fetch_assoc(mysqli_query($conn, $sql));
-}
+    $sql = "SELECT saldo FROM user WHERE kodeUser = $userID";
+    $saldo = mysqli_fetch_assoc(mysqli_query($conn, $sql));
+    $saldo = (int)($saldo['saldo']);
+
+    $sql = "SELECT * FROM voucher";
+    $voucher = mysqli_query($conn, $sql);
+    
+    
+    
+    
+    if(isset($_GET['voucherButton'])){
+        $potongan = $_GET['voucher'];
+        // var_dump($potongan);
+        // var_dump($potongan);
+        $sql = "SELECT * FROM voucher WHERE voucherID = $potongan";
+        $disc = mysqli_fetch_object(mysqli_query($conn, $sql));
+        $totalDisc = $disc->potongan;
+        if($disc->jenis == 'bagi'){
+            $totalPrice = $totalPayment['TotalPayment'] + $totalOngkir['TotalOngkir'];
+            $totalPriceFix = $totalPrice-($totalPrice * $totalDisc);
+            
+        }else{
+            $totalPriceFix = ($totalPayment['TotalPayment'] + $totalOngkir['TotalOngkir']) - $totalDisc;
+            // $totalPrice -= $totalPrice * $voucher;
+
+        }
+
+        $discSelected = $disc->voucherName;
+        
+        // $totalPrice = $totalPayment['TotalPayment'] + $totalOngkir['TotalOngkir'];
+        // echo "<script>
+        // var value = localStorage.getItem(price); 
+        // jQuery.post('example.php', {myKey: value}, function(data) 
+        // { 
+        // alert('Do something with example.php response'); 
+        // }).fail(function() 
+        // { 
+        // alert('Damn, something broke'); 
+        // }); 
+        // </script>";
+    }else{
+        // $voucher = 0.1;
+        $totalPriceFix = $totalPayment['TotalPayment'] + $totalOngkir['TotalOngkir'];
+        // $totalPrice -= $totalPrice * $voucher;
+        // echo "<script>localStorage.setItem('price', '$totalPrice')</script>";
+    }
+    
+    if(isset($_POST['bayar'])){
+        // session_start();
+        // $totalPrice = "<script>localStorage.getItem(price)</script>";
+        // $potongan = $_GET['voucher'];
+        // if(isset($potongan)){
+            // }
+            // $date = date('Y-m-d');
+            // var_dump($potongan);
+            $ongkir = $totalOngkir['TotalOngkir'];
+            // var_dump($totalPriceFix, (int)$userID, (int)$ongkir, (int)$potongan);
+            if($saldo >= $totalPriceFix){
+            // $now = date('Y-m-d');
+            
+            if(isset($potongan)){
+                $sql = "INSERT INTO tbl_order VALUES ('', $userID, 'bayar', '$now', '', $totalPriceFix, $ongkir, $potongan )";
+            }else{
+                $sql = "INSERT INTO tbl_order VALUES ('', $userID, 'bayar', '$now', '', $totalPriceFix, $ongkir, 0 )";
+            }
+            
+            $insertOrder = mysqli_query($conn,$sql)or trigger_error("Query Failed! SQL: $sql - Error: ".mysqli_error($conn), E_USER_ERROR);
+            $sql = mysqli_query($conn, "SELECT max(transaksiID) AS last FROM tbl_order");
+            // $last = $sql2['last'];
+            $last = mysqli_fetch_object($sql);
+            $next = (int)$last->last;
+
+            if($insertOrder){
+                $sql = "SELECT cart.*, product.harga, user.kodeUser AS kodepenjual FROM cart INNER JOIN detailsproduct
+                USING(kodeItem) INNER JOIN product ON detailsproduct.kodeProduk =  product.kodeProduk INNER JOIN user 
+                ON product.kodeUser = user.kodeUser WHERE cart.kodeUser = $userID";
+                $inputdetails = mysqli_query($conn, $sql);
+                foreach($inputdetails as $row){
+                    $inserdetails = "INSERT INTO orderdetails VALUES ('', $row[kodeItem], $row[qty], $row[harga], $next, $row[detailsOngkir], $row[idEkspedisi], $row[kodepenjual])";
+                    mysqli_query($conn, $inserdetails)or trigger_error("Query Failed! SQL: $inserdetails - Error: ".mysqli_error($conn), E_USER_ERROR);
+                    
+                    $minusStock = "UPDATE detailsproduct SET stok = stok - $row[qty] WHERE kodeItem = $row[kodeItem]";
+                    mysqli_query($conn, $minusStock)or trigger_error("Query Failed! SQL: $minusStock - Error: ".mysqli_error($conn), E_USER_ERROR);
+                    
+                    $ratingPenjual = "UPDATE user SET transaksi = transaksi + 1 WHERE kodeUser = $row[kodepenjual]";
+                    mysqli_query($conn, $ratingPenjual)or trigger_error("Query Failed! SQL: $ratingPenjual - Error: ".mysqli_error($conn), E_USER_ERROR);
+
+                }
+                echo    "<script>
+                                alert('Pembelian berhasil!');
+                        </script>";
+            }
+            else{
+                echo "gagal!";
+            }
+                // header("location: cart.php");
+        }else{
+            echo    "<script>
+                            alert('Saldo anda tidak cukup untuk pembelian ini, silahkan TopUp saldo!')
+                    </script>";
+        }
+    }
+
+
 
 ?>
 <html>
@@ -56,6 +168,7 @@ if(isset($_SESSION['username'])){
     }
     #toko-name{
         margin-bottom: -5px;
+        font-size: 15px;
     }
     #item-name{
     font-weight: 600;
@@ -89,95 +202,106 @@ if(isset($_SESSION['username'])){
 </head>
 <body>
     <?php include "nav.php"; ?>
-<div id="container" class="row">
-        <div class="col-7 ml-5">
-            <h5>Keranjang</h5>
-            <hr>
-            <!-- ANCHOR CART ITEMS -->
-            <div class="cart-items">
-                <div class="cart-item row">
-                    <div class="col-2">
-                        <img class="d-block w-100" src="assets/erigo.jpg" alt="">
-                    </div>
-                    <div class="col-auto">
-                        <p id="item-name">Cloth Jacket Erigo XY231B</p>
-                        <p id="toko-name" class="mt-4">Erigo Official Store</p>
-                        <small><i class="fa fa-map-marker" aria-hidden="true"></i> Jawa Timur</small>
+
+        <div id="container" class="row">
+                <div class="col-7 ml-5">
+                    <h5>Keranjang</h5>
+                    <hr>
+                    <!-- ANCHOR CART ITEMS -->
+                    <div class="cart-items">
+                        <?php 
+                        foreach($item as $row){
+                        ?>
+                        <div class="cart-item row">
+                            <div class="col-2">
+                                <a href="item.php?product=<?= $row["productCode"];?>"><img class="d-block w-100" src="assets/<?=$row['gambar'];?>" alt=""></a>
+                            </div>
+                            <div class="col-10">
+                                <p id="item-name"><?=$row['namaProduk'];?></p>
+                                <small class="float-right">Ongkos kirim: <span style="color:#0275d8; font-weight:bold;"><?=number_format($row['ongkir'],0,',','.');?></span></small>
+                                <p id="toko-name" class="mt-4"><?=$row['sellerName'];?></p>
+                                <small><i class="fa fa-map-marker" style="color: #0275d8;" aria-hidden="true"></i> <?=$row['lokasi'];?></small>
+                                <small class="float-right">Qty: <?=$row['qty'];?> | Warna: <?=$row['warna'];?> | Ukuran: <?=$row['ukuran'];?> | <a href="cart-hapus.php?id=<?=$row['ID']?>"><i class="fa fa-trash" aria-hidden="true" ></i></a></small>
+
+                            </div>
+                        </div>
+                        <hr>
+                        <?php } ?>
+                    </div> <!--ENDIV CART-ITEMS-->
+                </div>
+                    
+                <!-- </div> -->
+                <div class="col-4">
+                    <div class="frame">
+                        <h6 id="jenis" style="font-weight: 900;">Pilih Jenis</h6>  
+                        <form action="" method="GET">
+                        <label for="">Voucher</label>
+                        <select name="voucher" class="custom-select mb-2">
+                            <?php 
+                            if(isset($discSelected)){?>
+                                <option selected hidden value readonly="<?=$discSelected;?>"><?=$discSelected;?></option>
+                            <?php foreach($voucher as $row){
+                                    if($row['voucherID'] != 0){
+
+                            ?>
+                            <option value="<?=$row['voucherID'];?>"><?=$row['voucherName'];?></option>
+                            <?php }
+                                }
+                            }else{
+                                foreach($voucher as $row){ 
+                                    if($row['voucherID'] != 0){?>
+                            
+                                        <option value="<?=$row['voucherID'];?>"><?=$row['voucherName'];?></option>
+                                <?php }
+                                    }
+                            }
+                            ?>
+                        </select>
+                        <button name="voucherButton" type="submit" class="btn btn-outline-primary btn-sm btn-block mt-2 mb-2">Pilih Voucher</button>
+                        </form>
+                        <hr>
+                        <div class="row">
+                            <div class="col-5">
+                                <p>Total Harga Barang</p>
+                                <p>Total Diskon Barang</p>
+                                <p>Total Ongkos Kirim</p>
+                            </div>
+                            <div class="col-7 text-right">
+                                <p id="items-price">
+                                
+                                <?=number_format($totalPayment['TotalPayment'],0,',','.');?>
+                                </p>
+                                <p id="discount-price">
+                                0
+                                </p>
+                                <p id="deliv-price">
+                                <?=number_format($totalOngkir['TotalOngkir'],0,',','.');?>
+                            </p>
+                        </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-5">
+                                <p style="font-weight: bold;">Total Harga</p>
+                                <p style="margin-top: 10px;">Saldo</p>
+                            </div>
+                            <div class="col-7 text-right">
+                                <p id="total-price" style="font-weight: bold;">
+                                <?=number_format($totalPriceFix,0,',','.');?>
+                            </p>
+                            <p id="saldo" style="margin-top: 10px;">
+                                <?=number_format($saldo,0,',','.');?>
+                                </p>
+                            </div>
+                        </div>
+                        <form action="" method="POST">
+                        <button id="bayar" name="bayar" type="submit" onclick="return confirm('Apakah anda yakin?')">Bayar</button>
+                        </form>
                     </div>
                 </div>
-                <hr>
-                <div class="cart-item row">
-                    <div class="col-2">
-                        <img class="d-block w-100" src="assets/kategori-celana-wanita.jpg" alt="">
-                    </div>
-                    <div class="col-auto">
-                        <p id="item-name">Cloth Jacket Erigo XY231B</p>
-                        <p id="toko-name" class="mt-4">Erigo Official Store</p>
-                        <small><i class="fa fa-map-marker" aria-hidden="true"></i> Jawa Timur</small>
-                    </div>
-                </div>
-                <hr>
-            </div> <!--ENDIV CART-ITEMS-->
-        </div>
-            
-        <!-- </div> -->
-        <div class="col-4">
-            <div class="frame">
-                <h6 id="jenis" style="font-weight: 900;">Pilih Jenis</h6>  
-                <form action="">
-                <label for="">Voucher</label>
-                <select class="custom-select mb-2">
-                    <option value="1" selected>S</option>
-                    <option value="2">M</option>
-                    <option value="3">L</option>
-                    <option value="4">XL</option>
-                    <option value="5">XXL</option>
-                </select>
-                <button type="submit" class="btn btn-outline-primary btn-sm btn-block mt-2 mb-2">Pilih Voucher</button>
-                </form>
-                <hr>
-                <div class="row">
-                    <div class="col-5">
-                        <p>Total Harga Barang</p>
-                        <p>Total Diskon Barang</p>
-                        <p>Total Ongkos Kirim</p>
-                    </div>
-                    <div class="col-7 text-right">
-                        <p id="items-price">
-                        100.000
-                        </p>
-                        <p id="discount-price">
-                        0
-                        </p>
-                        <p id="deliv-price">
-                        10.000
-                        </p>
-                    </div>
-                </div>
-                <hr>
-                <div class="row">
-                    <div class="col-5">
-                        <p style="font-weight: bold;">Total Harga</p>
-                        <p style="margin-top: 10px;">Sisa Saldo</p>
-                    </div>
-                    <div class="col-7 text-right">
-                        <p id="total-price" style="font-weight: bold;">
-                        110.000
-                        </p>
-                        <p id="sisa-saldo" style="margin-top: 10px;">
-                        2000
-                        </p>
-                    </div>
-                </div>
-                <form action="">
-                <button id="bayar" type="submit">Bayar</button>
-                </form>
             </div>
         </div>
-    </div>
-</div>
-    
-    
+            
 
 	<script>
 		let tabs = document.querySelector(".tabs");

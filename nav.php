@@ -16,9 +16,13 @@
                 <a class="nav-link mt-1" href="cart.php"><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary"><?=$cartStack;?></span></a>
                 <?php 
             } else{
-                ?>
-                <a class="nav-link mt-1" href="cart.php"><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary">0</span></a>
-            <?php } ?>
+                if(!isset($userName)){ ?>
+				<button id="trigger-login" class="nav-link btn "><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary">0</span></button>
+				<?php
+				}else{ ?>
+					<a class="nav-link mt-1" href="cart.php"><i class="fa fa-shopping-cart aria-hidden='true' fa-lg"></i><span class="badge badge-primary">0</span></a>
+				<?php }
+			} ?>
         </li>
         <?php 
 		  	if(!isset($userName)){ ?>
@@ -39,3 +43,9 @@
         </ul>
       </div>
     </nav>
+	<script>
+		const coba = document.querySelector('#trigger-login');
+		coba.addEventListener('click', function onClick(event) {
+            alert("Login terlebih dahulu!");
+        });
+	</script>

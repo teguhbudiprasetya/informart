@@ -13,7 +13,7 @@ if(isset($_SESSION['username'])){
     $cartStack = $cart['COUNT(id)'];	
 }
 // var_dump($userName);
-$sql = "SELECT product.*, user.lokasi FROM product INNER JOIN user USING(kodeUser) LIMIT 6";
+$sql = "SELECT product.*, provinsi.namaProvinsi AS lokasi FROM product INNER JOIN user USING(kodeUser) INNER JOIN provinsi USING(idProvinsi) LIMIT 6";
 $product = mysqli_query($conn, $sql);
 
 
