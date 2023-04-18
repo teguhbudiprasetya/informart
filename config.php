@@ -12,7 +12,187 @@ if (!$conn) {
 }
 
 
-//=============================FUNCTION TABEL BUKU==================================
+
+function exist($data){
+    global $conn;
+    if($data -> num_rows > 0){
+        return false;
+    }else{
+        return true;
+    }
+
+}
+
+function uploadProfil($id){
+    global $conn;
+    $namaFile = $_FILES['berkas']['name'];
+    $ukuranFile = $_FILES['berkas']['size'];
+    $error = $_FILES['berkas']['error'];
+    $tmpName = $_FILES['berkas']['tmp_name'];
+
+    if ($error > 0) {
+        echo "<script>
+                alert('Pilih gambar terlebih dahulu');
+            </script>";
+        return false;
+    }
+    else{
+
+        // yang di upload gambar / tidak
+        $ekstensiGambarValid = ['jpg', 'jpeg', 'png'];
+        // mengambil ekstensi file yang diupload dari 1 string gambar 
+        // menggunakan fungsi explode=> memecah 1 string menjadi array
+        // ahmad.jpg = ['ahmad', 'jpg]
+        $ekstensiGambar = explode('.', $namaFile);
+        // var_dump($ekstensiGambar);
+        // membuat sistem mengambil paling belakang saja
+        // ex ahmad.fanani.jpg => yang diambil ekstensi belakang
+        // mengubah huruf kecil semua ex fanani.JPG => fanani.jpg
+        $ekstensiGambar = strtolower(end($ekstensiGambar));
+        // var_dump($ekstensiGambar);
+    
+        // mengecek ekstensi di dalam list ekstensi
+        if ( !in_array($ekstensiGambar, $ekstensiGambarValid)) {
+            echo "<script>
+            alert('Masukkan gambar yang sesuai!!!');
+            </script>";
+            return false;
+        }
+        else{
+            // cek ukuran terlalu besar
+            if ($ukuranFile > 1000000) {
+                echo "<script>
+                alert('Ukuran gambar terlalu besar boss!!!!');
+                </script>";
+                return false;
+            }else{
+
+                // lolos pengecekan 
+                move_uploaded_file($tmpName, 'assets/profil/'.$namaFile);
+                
+                $sql = "UPDATE user SET foto = '$namaFile' WHERE kodeUser = $id";
+                mysqli_query($conn, $sql);
+                
+                
+                return true;
+            }
+        }
+        
+    }
+}
+
+function uploadFotoProduk($id){
+    global $conn;
+    $namaFile = $_FILES['berkas']['name'];
+    $ukuranFile = $_FILES['berkas']['size'];
+    $error = $_FILES['berkas']['error'];
+    $tmpName = $_FILES['berkas']['tmp_name'];
+
+    if ($error > 0) {
+        echo "<script>
+                alert('Pilih gambar terlebih dahulu');
+            </script>";
+        return false;
+    }
+    else{
+
+        // yang di upload gambar / tidak
+        $ekstensiGambarValid = ['jpg', 'jpeg', 'png'];
+        // mengambil ekstensi file yang diupload dari 1 string gambar 
+        // menggunakan fungsi explode=> memecah 1 string menjadi array
+        // ahmad.jpg = ['ahmad', 'jpg]
+        $ekstensiGambar = explode('.', $namaFile);
+        // var_dump($ekstensiGambar);
+        // membuat sistem mengambil paling belakang saja
+        // ex ahmad.fanani.jpg => yang diambil ekstensi belakang
+        // mengubah huruf kecil semua ex fanani.JPG => fanani.jpg
+        $ekstensiGambar = strtolower(end($ekstensiGambar));
+        // var_dump($ekstensiGambar);
+    
+        // mengecek ekstensi di dalam list ekstensi
+        if ( !in_array($ekstensiGambar, $ekstensiGambarValid)) {
+            echo "<script>
+            alert('Masukkan gambar yang sesuai!!!');
+            </script>";
+            return false;
+        }
+        else{
+            // cek ukuran terlalu besar
+            if ($ukuranFile > 1000000) {
+                echo "<script>
+                alert('Ukuran gambar terlalu besar boss!!!!');
+                </script>";
+                return false;
+            }else{
+
+                // lolos pengecekan 
+                move_uploaded_file($tmpName, 'assets/'.$namaFile);
+                
+                $sql = "UPDATE product SET gambar = '$namaFile' WHERE kodeProduk = $id";
+                mysqli_query($conn, $sql);
+                
+                
+                return true;
+            }
+        }
+        
+    }
+}
+function checkFotoProduk(){
+    global $conn;
+    $namaFile = $_FILES['berkas']['name'];
+    $ukuranFile = $_FILES['berkas']['size'];
+    $error = $_FILES['berkas']['error'];
+    $tmpName = $_FILES['berkas']['tmp_name'];
+
+    if ($error > 0) {
+        echo "<script>
+                alert('Pilih gambar terlebih dahulu');
+            </script>";
+        return false;
+    }
+    else{
+
+        // yang di upload gambar / tidak
+        $ekstensiGambarValid = ['jpg', 'jpeg', 'png'];
+        // mengambil ekstensi file yang diupload dari 1 string gambar 
+        // menggunakan fungsi explode=> memecah 1 string menjadi array
+        // ahmad.jpg = ['ahmad', 'jpg]
+        $ekstensiGambar = explode('.', $namaFile);
+        // var_dump($ekstensiGambar);
+        // membuat sistem mengambil paling belakang saja
+        // ex ahmad.fanani.jpg => yang diambil ekstensi belakang
+        // mengubah huruf kecil semua ex fanani.JPG => fanani.jpg
+        $ekstensiGambar = strtolower(end($ekstensiGambar));
+        // var_dump($ekstensiGambar);
+    
+        // mengecek ekstensi di dalam list ekstensi
+        if ( !in_array($ekstensiGambar, $ekstensiGambarValid)) {
+            echo "<script>
+            alert('Masukkan gambar yang sesuai!!!');
+            </script>";
+            return false;
+        }
+        else{
+            // cek ukuran terlalu besar
+            if ($ukuranFile > 1000000) {
+                echo "<script>
+                alert('Ukuran gambar terlalu besar boss!!!!');
+                </script>";
+                return false;
+            }else{
+
+                return true;
+            }
+        }
+        
+    }
+}
+
+
+
+
+
 
 // proses mengambil tiap isi di database
 function query($query) {
